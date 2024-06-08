@@ -5,9 +5,10 @@ import { useEffect } from 'react';
 
 export default function StoreUserDetails() {
   const { user } = useUser();
-console.log(user)
+
   useEffect(() => {
     if (user) {
+        console.log(user);
       const userInfo = {
         id: user.id,
         email: user.primaryEmailAddress?.emailAddress,
@@ -25,6 +26,7 @@ console.log(user)
         body: JSON.stringify(userInfo),
       });
     }
+    console.log(user);
   }, [user]);
 
   return null; // This component doesn't render anything visible

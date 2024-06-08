@@ -3,22 +3,14 @@ import { CssBaseline, ThemeProvider, createTheme } from '@mui/material';
 import theme from '../theme';
 import './globals.css';
 import { Inter } from 'next/font/google';
-import { ClerkProvider } from '@clerk/nextjs';
+import { ClerkProvider, SignIn, SignOutButton, SignedIn } from '@clerk/nextjs';
 import { ReactNode } from 'react';
+import { AuthProvider } from '../context/AuthContext';
+import ThemeProviderWrapper from '@/components/Provider';
+import Header from '@/components/Header';
+import Footer from '@/components/Footer';
 
 const inter = Inter({ subsets: ['latin'] });
-interface ThemeProviderWrapperProps {
-  children: ReactNode;
-}
-
-const ThemeProviderWrapper = ({ children }: ThemeProviderWrapperProps) => (
-  <ClerkProvider>
-    <ThemeProvider theme={theme}>
-      <CssBaseline />
-      {children}
-    </ThemeProvider>
-  </ClerkProvider>
-);
 
 
 export default function RootLayout({
@@ -29,10 +21,15 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body className={inter.className}>
-        <ThemeProvider theme={theme}>
-          <CssBaseline />
-          <ThemeProviderWrapper>{children}</ThemeProviderWrapper>
-        </ThemeProvider>
+         <ThemeProviderWrapper>   
+         <Header />
+          <div style={{ display: 'flex', flexDirection: 'column', height: '100vh' }}>
+            <main style={{ flex: 1, overflow: 'auto', paddingTop: '64px' }}>
+              {children}
+            </main>
+            <Footer />
+          </div>
+          </ThemeProviderWrapper>
       </body>
     </html>
   );
