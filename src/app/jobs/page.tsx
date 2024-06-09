@@ -14,7 +14,7 @@ export default function Jobs() {
 
   useEffect(() => {
     // Populate local storage with dummy data on component mount
-    populateLocalStorage();
+    populateLocalStorage(); 
   }, []);
 
   const handleSearch = async () => {
@@ -65,7 +65,7 @@ export default function Jobs() {
         {jobs.map((job) => (
           <ListItem key={job.id} component={Paper} sx={{ marginBottom: 2 }}>
             <Box sx={{ display: 'flex', flexDirection: 'column', width: '100%' }}>
-              <Link href={`/jobs/${job.id}`} passHref>
+              
                 <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', cursor: 'pointer', textDecoration: 'none' }}>
                   <Typography variant="h6">{job.companyName}</Typography>
                   <Box>
@@ -73,15 +73,17 @@ export default function Jobs() {
                     <Typography variant="body2">${job.salary}</Typography>
                   </Box>
                 </Box>
-              </Link>
+              
               <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 1 }}>
                 <Box sx={{ display: 'flex', gap: 1 }}>
                   <Typography variant="body2">{job.location || 'N/A'}</Typography>
                   <Typography variant="body2">{job.jobType || 'N/A'}</Typography>
                 </Box>
+                <Link href={`/jobs/${job.id}`} passHref>
                 <Button variant="contained" color="primary">
-                  Apply
+                  Read more
                 </Button>
+                </Link>
               </Box>
             </Box>
           </ListItem>

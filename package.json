@@ -11,15 +11,17 @@
   "dependencies": {
     "@clerk/clerk-sdk-node": "^5.0.10",
     "@clerk/nextjs": "^5.1.4",
-    "@mui/icons-material": "latest",
     "@emotion/react": "^11.11.4",
     "@emotion/styled": "^11.11.5",
+    "@mui/icons-material": "latest",
     "@mui/material": "^5.15.19",
     "@prisma/client": "^5.15.0",
     "next": "14.2.3",
     "next-auth": "^4.24.7",
     "react": "^18",
-    "react-dom": "^18"
+    "react-dom": "^18",
+    "react-media-recorder": "^1.6.6",
+    "react-webcam": "^7.2.0"
   },
   "devDependencies": {
     "@types/node": "^20",

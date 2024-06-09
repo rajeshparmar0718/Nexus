@@ -17,7 +17,7 @@ export default function SignUpPage ()  {
         localStorage.removeItem('redirectAfterSignUp');
         window.location.href = redirectPath;
       } else {
-        window.location.href = '/';
+        window.location.href = 'jobs/profile';
       }
     }
   }, [isSignedIn, pathname]);
