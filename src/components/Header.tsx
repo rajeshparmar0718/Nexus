@@ -50,11 +50,15 @@ export default function Header(props: Props) {
       </Typography>
       <Divider />
       <List>
+        {
+            !isSignedIn
+        }
         <ListItem key="ForEmployer" disablePadding>
           <ListItemButton sx={{ textAlign: 'center' }} onClick={() => handleNavItemClick('/employer')}>
             <ListItemText primary="ForEmployer" />
           </ListItemButton>
         </ListItem>
+        
         <ListItem key="ForJobSeeker" disablePadding>
           <ListItemButton sx={{ textAlign: 'center' }} onClick={() => handleNavItemClick('/jobs/home')}>
             <ListItemText primary="ForJobSeeker" />

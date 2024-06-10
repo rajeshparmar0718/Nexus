@@ -18,6 +18,7 @@ export interface Education {
   }
   
   export interface UserProfile {
+    user_id:string,
     firstName: string;
     lastName: string;
     email: string;

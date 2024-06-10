@@ -16,6 +16,7 @@
     "@mui/icons-material": "latest",
     "@mui/material": "^5.15.19",
     "@prisma/client": "^5.15.0",
+    "@supabase/supabase-js": "^2.43.4",
     "next": "14.2.3",
     "next-auth": "^4.24.7",
     "react": "^18",
