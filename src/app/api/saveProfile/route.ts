@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { supabase } from '@/utils/supabaseClient';
+import { supabase } from '@/utils/supabase/supabaseClient';
 
 export async function POST(req: NextRequest) {
   const profile = await req.json();

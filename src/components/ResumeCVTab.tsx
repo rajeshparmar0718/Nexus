@@ -1,79 +1,102 @@
 'use client';
 
-import React, { useState, useRef, useCallback } from 'react';
-import { Box, Typography, Button } from '@mui/material';
+import React, { useState, useRef, useCallback, useEffect } from 'react';
+import { Box, Typography, Button, Paper, Checkbox, FormControlLabel } from '@mui/material';
 import Webcam from 'react-webcam';
 import { UserProfile } from '@/utils/dummyUserProfileData';
-import { supabase } from '@/utils/supabaseClient';
+import { supabase } from '@/utils/supabase/supabaseClient';
 
 interface ResumeCVTabProps {
   profile: UserProfile;
   setProfile: React.Dispatch<React.SetStateAction<UserProfile>>;
+  recordedVideo: Blob | null;
+  setRecordedVideo: React.Dispatch<React.SetStateAction<Blob | null>>;
 }
 
-const ResumeCVTab: React.FC<ResumeCVTabProps> = ({ profile, setProfile }) => {
-  const [videoURL, setVideoURL] = useState<string | null>(profile.resumeVideo || null);
+const ResumeCVTab: React.FC<ResumeCVTabProps> = ({ profile, setProfile, recordedVideo, setRecordedVideo }) => {
+  const [videoURL, setVideoURL] = useState<string | null>(null);
   const [recording, setRecording] = useState<boolean>(false);
-  const [capturedVideo, setCapturedVideo] = useState<Blob | null>(null);
-  const [resumeFile, setResumeFile] = useState<File | null>(null);
+  const [resumeFiles, setResumeFiles] = useState<File[]>([]);
+  const [selectedResumeIndex, setSelectedResumeIndex] = useState<number | null>(null);
   const webcamRef = useRef<Webcam>(null);
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
 
-  const handleStartRecording = useCallback(() => {
-    setRecording(true);
-    setCapturedVideo(null);
-    const mediaStream = webcamRef.current?.stream;
-    if (mediaStream) {
-      mediaRecorderRef.current = new MediaRecorder(mediaStream, {
-        mimeType: 'video/webm',
+  useEffect(() => {
+    if (webcamRef.current && webcamRef.current.stream) {
+      const mediaStream = webcamRef.current.stream;
+      mediaStream.getTracks().forEach((track) => {
+        track.stop();
       });
-      mediaRecorderRef.current.addEventListener('dataavailable', handleDataAvailable);
-      mediaRecorderRef.current.start();
     }
-  }, [webcamRef, setRecording]);
+  }, []);
+
+  const handleStartRecording = useCallback(() => {
+    navigator.mediaDevices.getUserMedia({ video: true, audio: true })
+      .then((stream) => {
+        if (webcamRef.current && webcamRef.current.video) {
+          webcamRef.current.video.srcObject = stream;
+        }
+        setRecording(true);
+        setRecordedVideo(null);
+        mediaRecorderRef.current = new MediaRecorder(stream, { mimeType: 'video/webm' });
+        mediaRecorderRef.current.addEventListener('dataavailable', handleDataAvailable);
+        mediaRecorderRef.current.start();
+      })
+      .catch((error) => {
+        console.error('Error accessing media devices.', error);
+      });
+  }, [setRecording, setRecordedVideo]);
 
   const handleStopRecording = useCallback(() => {
     mediaRecorderRef.current?.stop();
     setRecording(false);
+    if (webcamRef.current && webcamRef.current.stream) {
+      const mediaStream = webcamRef.current.stream;
+      mediaStream.getTracks().forEach((track) => {
+        track.stop();
+      });
+    }
   }, [mediaRecorderRef, setRecording]);
 
   const handleDataAvailable = useCallback(
     ({ data }: BlobEvent) => {
       if (data.size > 0) {
-        setCapturedVideo(data);
+        setRecordedVideo(data);
         const videoURL = URL.createObjectURL(data);
         setVideoURL(videoURL);
-        setProfile((prevProfile) => ({ ...prevProfile, resumeVideo: videoURL }));
       }
     },
-    [setCapturedVideo, setVideoURL, setProfile]
+    [setRecordedVideo, setVideoURL]
   );
 
-  const handleRemoveResume = () => {
-    setProfile((prevProfile) => ({ ...prevProfile, resume: null }));
-    setResumeFile(null);
-  };
-
-  const handleResumeUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files ? e.target.files[0] : null;
-    if (file) {
-      setResumeFile(file);
-      setProfile((prevProfile) => ({ ...prevProfile, resume: file.name }));
+  const handleRemoveResume = (index: number) => {
+    setResumeFiles((prevFiles) => prevFiles.filter((_, i) => i !== index));
+    if (selectedResumeIndex === index) {
+      setSelectedResumeIndex(null);
+    } else if (selectedResumeIndex !== null && selectedResumeIndex > index) {
+      setSelectedResumeIndex(selectedResumeIndex - 1);
     }
   };
 
-  const handleRecordAgain = () => {
-    setVideoURL(null);
-    setProfile((prevProfile) => ({ ...prevProfile, resumeVideo: null }));
-    setCapturedVideo(null);
-    localStorage.removeItem('resumeVideo'); // Remove the video URL from local storage
+  const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = e.target.files;
+    if (files) {
+      const newFiles = Array.from(files);
+      setResumeFiles((prevFiles) => [...prevFiles, ...newFiles]);
+    }
+  };
+
+  const handleCheckboxChange = (index: number) => {
+    setSelectedResumeIndex(index);
   };
 
   const handleSave = async () => {
-    if (resumeFile) {
+    const resumeUrls: string[] = [];
+
+    for (const resumeFile of resumeFiles) {
       const { data: resumeData, error: resumeError } = await supabase.storage
         .from('resumes')
-        .upload(`public/${profile.user_id}-resume.${resumeFile.name.split('.').pop()}`, resumeFile, {
+        .upload(`${profile.user_id}/resume/${resumeFile.name}`, resumeFile, {
           cacheControl: '3600',
           upsert: true,
         });
@@ -82,20 +105,16 @@ const ResumeCVTab: React.FC<ResumeCVTabProps> = ({ profile, setProfile }) => {
         console.error('Error uploading resume:', resumeError.message);
       } else {
         const publicUrl = supabase.storage.from('resumes').getPublicUrl(resumeData.path).data.publicUrl;
-        setProfile((prevProfile) => ({ ...prevProfile, resume: publicUrl }));
-        
-        // Save the resume URL to the user profile in Supabase
-        await supabase
-          .from('profiles')
-          .update({ resume: publicUrl })
-          .eq('user_id', profile.user_id);
+        resumeUrls.push(publicUrl);
       }
     }
 
-    if (capturedVideo) {
+    const videoUrls: string[] = [];
+
+    if (recordedVideo) {
       const { data: videoData, error: videoError } = await supabase.storage
         .from('resume-videos')
-        .upload(`public/${profile.user_id}-video.webm`, capturedVideo, {
+        .upload(`${profile.user_id}/video/webm`, recordedVideo, {
           cacheControl: '3600',
           upsert: true,
         });
@@ -104,15 +123,23 @@ const ResumeCVTab: React.FC<ResumeCVTabProps> = ({ profile, setProfile }) => {
         console.error('Error uploading video:', videoError.message);
       } else {
         const publicUrl = supabase.storage.from('resume-videos').getPublicUrl(videoData.path).data.publicUrl;
-        setProfile((prevProfile) => ({ ...prevProfile, resumeVideo: publicUrl }));
-        
-        // Save the video URL to the user profile in Supabase
-        await supabase
-          .from('profiles')
-          .update({ resumeVideo: publicUrl })
-          .eq('user_id', profile.user_id);
+        videoUrls.push(publicUrl);
       }
     }
+
+    const selectedResumeUrl = selectedResumeIndex !== null ? resumeUrls[selectedResumeIndex] : null;
+
+    setProfile((prevProfile) => ({
+      ...prevProfile,
+      resume: resumeUrls,
+      resumeVideo: videoUrls,
+      selectedResume: selectedResumeUrl,
+    }));
+
+    await supabase
+      .from('profiles')
+      .update({ resume: resumeUrls, resumeVideo: videoUrls, selectedResume: selectedResumeUrl })
+      .eq('user_id', profile.user_id);
   };
 
   return (
@@ -121,23 +148,31 @@ const ResumeCVTab: React.FC<ResumeCVTabProps> = ({ profile, setProfile }) => {
       <Box sx={{ display: 'flex', alignItems: 'center', mt: 2 }}>
         <Button variant="contained" component="label">
           Upload new file
-          <input type="file" hidden onChange={handleResumeUpload} />
+          <input type="file" hidden onChange={handleFileUpload} multiple />
         </Button>
-        {profile.resume && (
-          <Box sx={{ ml: 2 }}>
-            <Typography>Uploaded Resume: <a href={profile.resume} target="_blank" rel="noopener noreferrer">View</a></Typography>
-            <Button variant="text" onClick={handleRemoveResume}>
-              Remove your resume
-            </Button>
-          </Box>
-        )}
+      </Box>
+      <Box sx={{ mt: 2, display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))', gap: 2 }}>
+        {resumeFiles.map((file, index) => (
+          <Paper key={index} sx={{ p: 2, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+            <FormControlLabel
+              control={
+                <Checkbox
+                  checked={selectedResumeIndex === index}
+                  onChange={() => handleCheckboxChange(index)}
+                />
+              }
+              label={file.name}
+            />
+            <Button variant="text" onClick={() => handleRemoveResume(index)}>Remove</Button>
+          </Paper>
+        ))}
       </Box>
       <Box sx={{ mt: 4 }}>
         <Typography variant="h6">Record Video Resume</Typography>
         {videoURL ? (
           <Box>
             <video src={videoURL} controls style={{ width: '100%' }} />
-            <Button variant="contained" color="secondary" onClick={handleRecordAgain} sx={{ mt: 2 }}>
+            <Button variant="contained" color="secondary" onClick={() => setVideoURL(null)} sx={{ mt: 2 }}>
               Record Again
             </Button>
           </Box>

@@ -1,19 +1,28 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { Container, Typography, Box, Tab, Tabs, Avatar, Button, TextField, Divider, Paper, IconButton, FormControlLabel, Checkbox } from '@mui/material';
+import { Container, Typography, Box, Tab, Tabs, Divider, Paper, Button, IconButton } from '@mui/material';
 import AddIcon from '@mui/icons-material/Add';
 import EditIcon from '@mui/icons-material/Edit';
+import PersonalDetailsForm from '@/components/Profile/PersonalDetailsForm';
+import SocialProfilesForm from '@/components/Profile/SocialProfilesForm';
+import SkillsForm from '@/components/Profile/SkillsForm';
+import EducationForm from '@/components/Profile/EducationForm';
+import ExperienceForm from '@/components/Profile/ExperienceForm';
+
+import { useSupabase } from '@/context/SupabaseAuthProvider';
+import { useRouter } from 'next/navigation';
+import { Education, UserProfile, WorkExperience } from '@/utils/dummyUserProfileData';
 import ResumeCVTab from '@/components/ResumeCVTab';
-import { useUser } from '@clerk/nextjs';
-import { supabase } from '@/utils/supabaseClient';
-import { UserProfile, Education, WorkExperience, saveUserProfile, getUserProfile } from '@/utils/dummyUserProfileData';
 
 export default function Profile() {
-  const { user } = useUser();
+  const { session, supabase } = useSupabase();
+  const router = useRouter();
+  const user = session?.user;
+
   const [profile, setProfile] = useState<UserProfile>({
     user_id: user?.id || '',
-    email: user?.emailAddresses[0]?.emailAddress || '',
+    email: user?.email || '',
     firstName: '',
     lastName: '',
     address: '',
@@ -28,14 +37,15 @@ export default function Profile() {
     twitter: '',
     education: [],
     workExperience: [],
-    resume: null,
+    resume: [],
+    selectedResume: null,
     image: null,
     primaryRole: '',
     yearsOfExperience: '',
     openRoles: '',
     bio: '',
     skills: [],
-    resumeVideo: null,
+    resumeVideo: [],
   });
 
   const [currentEducation, setCurrentEducation] = useState<Education>({
@@ -60,6 +70,7 @@ export default function Profile() {
   const [addingEducation, setAddingEducation] = useState(false);
   const [addingExperience, setAddingExperience] = useState(false);
   const [isExistingUser, setIsExistingUser] = useState(false);
+  const [recordedVideo, setRecordedVideo] = useState<Blob | null>(null);
 
   useEffect(() => {
     if (user) {
@@ -67,7 +78,7 @@ export default function Profile() {
     }
   }, [user]);
 
-  const checkIfProfileExists = async (user_id: string) => {
+  const checkIfProfileExists = async (user_id: string | any) => {
     try {
       const { data, error } = await supabase
         .from('profiles')
@@ -77,12 +88,12 @@ export default function Profile() {
 
       if (data) {
         setIsExistingUser(true);
-        fetchProfile(user_id);
+        fetchProfile(data.user_id);
       } else {
         setIsExistingUser(false);
       }
 
-      if (error && error.code !== 'PGRST116') { // Code PGRST116 indicates no rows were found
+      if (error && error.code !== 'PGRST116') {
         console.error('Error checking profile existence:', error.message);
       }
     } catch (error) {
@@ -204,95 +215,9 @@ export default function Profile() {
       {activeTab === 1 && (
         <Box>
           <form onSubmit={handleSubmit}>
-            <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-              <Box sx={{ display: 'flex', gap: 2, alignItems: 'center' }}>
-                <Avatar src={profile.image || ''} sx={{ width: 56, height: 56 }} />
-                <Button variant="contained" component="label">
-                  Upload a new photo
-                  <input type="file" name="image" hidden onChange={handleFileChange} />
-                </Button>
-              </Box>
-              <TextField
-                label="Your name"
-                name="firstName"
-                value={profile.firstName}
-                onChange={handleChange}
-                fullWidth
-              />
-              <TextField
-                label="Where are you based?"
-                name="city"
-                value={profile.city}
-                onChange={handleChange}
-                fullWidth
-              />
-              <TextField
-                label="Select your primary role"
-                name="primaryRole"
-                value={profile.primaryRole}
-                onChange={handleChange}
-                fullWidth
-              />
-              <TextField
-                label="Years of experience"
-                name="yearsOfExperience"
-                value={profile.yearsOfExperience}
-                onChange={handleChange}
-                fullWidth
-              />
-              <TextField
-                label="Open to the following roles"
-                name="openRoles"
-                value={profile.openRoles}
-                onChange={handleChange}
-                fullWidth
-              />
-              <TextField
-                label="Your bio"
-                name="bio"
-                value={profile.bio}
-                onChange={handleChange}
-                fullWidth
-                multiline
-                rows={4}
-              />
-            </Box>
+            <PersonalDetailsForm profile={profile} handleChange={handleChange} handleFileChange={handleFileChange} />
           </form>
-          <Box sx={{ mt: 4 }}>
-            <Typography variant="h6">Social Profiles</Typography>
-            <TextField
-              label="Website"
-              name="website"
-              value={profile.website}
-              onChange={handleChange}
-              fullWidth
-              sx={{ mb: 2 }}
-            />
-            <TextField
-              label="LinkedIn"
-              name="linkedIn"
-              value={profile.linkedIn}
-              onChange={handleChange}
-              fullWidth
-              sx={{ mb: 2 }}
-            />
-            <TextField
-              label="GitHub"
-              name="github"
-              value={profile.github}
-              onChange={handleChange}
-              fullWidth
-              sx={{ mb: 2 }}
-            />
-            <TextField
-              label="Twitter"
-              name="twitter"
-              value={profile.twitter}
-              onChange={handleChange}
-              fullWidth
-              sx={{ mb: 2 }}
-            />
-          </Box>
+          <SocialProfilesForm profile={profile} handleChange={handleChange} />
           <Box sx={{ mt: 4 }}>
             <Typography variant="h6">Your work experience</Typography>
             {profile.workExperience?.map((exp, index) => (
@@ -311,69 +236,12 @@ export default function Profile() {
               </Paper>
             ))}
             {addingExperience && (
-              <Box sx={{ mt: 4 }}>
-                <TextField
-                  label="Company Name"
-                  name="companyName"
-                  value={currentExperience.companyName}
-                  onChange={(e) => setCurrentExperience({ ...currentExperience, companyName: e.target.value })}
-                  fullWidth
-                  sx={{ mb: 2 }}
-                />
-                <TextField
-                  label="Title"
-                  name="title"
-                  value={currentExperience.title}
-                  onChange={(e) => setCurrentExperience({ ...currentExperience, title: e.target.value })}
-                  fullWidth
-                  sx={{ mb: 2 }}
-                />
-                <TextField
-                  label="Start Date"
-                  name="startDate"
-                  type="date"
-                  value={currentExperience.startDate}
-                  onChange={(e) => setCurrentExperience({ ...currentExperience, startDate: e.target.value })}
-                  InputLabelProps={{ shrink: true }}
-                  fullWidth
-                  sx={{ mb: 2 }}
-                />
-                {!currentExperience.currentlyWorking && (
-                  <TextField
-                    label="End Date"
-                    name="endDate"
-                    type="date"
-                    value={currentExperience.endDate}
-                    onChange={(e) => setCurrentExperience({ ...currentExperience, endDate: e.target.value })}
-                    InputLabelProps={{ shrink: true }}
-                    fullWidth
-                    sx={{ mb: 2 }}
-                  />
-                )}
-                <FormControlLabel
-                  control={
-                    <Checkbox
-                      checked={currentExperience.currentlyWorking}
-                      onChange={(e) => setCurrentExperience({ ...currentExperience, currentlyWorking: e.target.checked })}
-                    />
-                  }
-                  label="Currently Working"
-                />
-                <TextField
-                  label="Description"
-                  name="description"
-                  value={currentExperience.description}
-                  onChange={(e) => setCurrentExperience({ ...currentExperience, description: e.target.value })}
-                  multiline
-                  rows={4}
-                  fullWidth
-                  sx={{ mb: 2 }}
-                />
-                <Box sx={{ display: 'flex', gap: 2, justifyContent: 'flex-end', mt: 2 }}>
-                  <Button variant="contained" onClick={handleAddExperience}>Add</Button>
-                  <Button variant="outlined" onClick={() => setAddingExperience(false)}>Cancel</Button>
-                </Box>
-              </Box>
+              <ExperienceForm
+                experience={currentExperience}
+                setExperience={setCurrentExperience}
+                handleAddExperience={handleAddExperience}
+                setAddingExperience={setAddingExperience}
+              />
             )}
             <Button variant="contained" startIcon={<AddIcon />} onClick={() => setAddingExperience(true)}>
               Add work experience
@@ -396,83 +264,18 @@ export default function Profile() {
               </Paper>
             ))}
             {addingEducation && (
-              <Box sx={{ mt: 4 }}>
-                <TextField
-                  label="University Name"
-                  name="universityName"
-                  value={currentEducation.universityName}
-                  onChange={(e) => setCurrentEducation({ ...currentEducation, universityName: e.target.value })}
-                  fullWidth
-                  sx={{ mb: 2 }}
-                />
-                <TextField
-                  label="Course Name"
-                  name="courseName"
-                  value={currentEducation.courseName}
-                  onChange={(e) => setCurrentEducation({ ...currentEducation, courseName: e.target.value })}
-                  fullWidth
-                  sx={{ mb: 2 }}
-                />
-                <TextField
-                  label="Degree"
-                  name="degree"
-                  value={currentEducation.degree}
-                  onChange={(e) => setCurrentEducation({ ...currentEducation, degree: e.target.value })}
-                  fullWidth
-                  sx={{ mb: 2 }}
-                />
-                <TextField
-                  label="Start Date"
-                  name="startDate"
-                  type="date"
-                  value={currentEducation.startDate}
-                  onChange={(e) => setCurrentEducation({ ...currentEducation, startDate: e.target.value })}
-                  InputLabelProps={{ shrink: true }}
-                  fullWidth
-                  sx={{ mb: 2 }}
-                />
-                {!currentEducation.currentlyStudying && (
-                  <TextField
-                    label="End Date"
-                    name="endDate"
-                    type="date"
-                    value={currentEducation.endDate}
-                    onChange={(e) => setCurrentEducation({ ...currentEducation, endDate: e.target.value })}
-                    InputLabelProps={{ shrink: true }}
-                    fullWidth
-                    sx={{ mb: 2 }}
-                  />
-                )}
-                <FormControlLabel
-                  control={
-                    <Checkbox
-                      checked={currentEducation.currentlyStudying}
-                      onChange={(e) => setCurrentEducation({ ...currentEducation, currentlyStudying: e.target.checked })}
-                    />
-                  }
-                  label="Currently Studying"
-                />
-                <Box sx={{ display: 'flex', gap: 2, justifyContent: 'flex-end', mt: 2 }}>
-                  <Button variant="contained" onClick={handleAddEducation}>Add</Button>
-                  <Button variant="outlined" onClick={() => setAddingEducation(false)}>Cancel</Button>
-                </Box>
-              </Box>
+              <EducationForm
+                education={currentEducation}
+                setEducation={setCurrentEducation}
+                handleAddEducation={handleAddEducation}
+                setAddingEducation={setAddingEducation}
+              />
             )}
             <Button variant="contained" startIcon={<AddIcon />} onClick={() => setAddingEducation(true)}>
               Add education
             </Button>
           </Box>
-          <Box sx={{ mt: 4 }}>
-            <Typography variant="h6">Your Skills</Typography>
-            <TextField
-              label="Your Skills"
-              name="skills"
-              value={profile.skills?.join(', ')}
-              onChange={handleSkillsChange}
-              fullWidth
-              placeholder="e.g. Python, React"
-            />
-          </Box>
+          <SkillsForm profile={profile} handleSkillsChange={handleSkillsChange} />
           <Button
             type="submit"
             variant="contained"
@@ -485,7 +288,12 @@ export default function Profile() {
         </Box>
       )}
       {activeTab === 2 && (
-        <ResumeCVTab profile={profile} setProfile={setProfile} />
+        <ResumeCVTab
+          profile={profile}
+          setProfile={setProfile}
+          recordedVideo={recordedVideo}
+          setRecordedVideo={setRecordedVideo}
+        />
       )}
     </Container>
   );

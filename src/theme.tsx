@@ -1,8 +1,8 @@
 // app/ThemeProviderWrapper.tsx
 'use client';
 
-import { ClerkProvider } from '@clerk/nextjs';
-import { CssBaseline, ThemeProvider, createTheme } from '@mui/material';
+
+import {  createTheme } from '@mui/material';
 import { ReactNode } from 'react';
 
 const theme = createTheme({

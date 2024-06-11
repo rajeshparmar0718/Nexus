@@ -1,4 +1,6 @@
-"use client";
+// components/Header.tsx
+'use client';
+
 import * as React from 'react';
 import AppBar from '@mui/material/AppBar';
 import Box from '@mui/material/Box';
@@ -14,8 +16,8 @@ import MenuIcon from '@mui/icons-material/Menu';
 import Toolbar from '@mui/material/Toolbar';
 import Typography from '@mui/material/Typography';
 import Button from '@mui/material/Button';
-import { UserButton, useUser } from '@clerk/nextjs';
 import Link from 'next/link';
+import { useSupabase } from '@/context/SupabaseAuthProvider';
 import { useRouter } from 'next/navigation';
 
 interface Props {
@@ -23,23 +25,32 @@ interface Props {
 }
 
 const drawerWidth = 240;
+const navItems = [
+  { name: 'ForEmployer', path: '/employer' },
+  { name: 'ForJobSeeker', path: '/jobs/home' },
+];
 
 export default function Header(props: Props) {
   const { window } = props;
-  const { isSignedIn } = useUser();
-  const [mobileOpen, setMobileOpen] = React.useState(false);
+  const { session, supabase } = useSupabase();
   const router = useRouter();
+  const [mobileOpen, setMobileOpen] = React.useState(false);
 
   const handleDrawerToggle = () => {
     setMobileOpen((prevState) => !prevState);
   };
 
+  const handleSignOut = async () => {
+    await supabase.auth.signOut();
+    router.push('/');
+  };
+
   const handleNavItemClick = (path: string) => {
-    if (!isSignedIn) {
-      localStorage.setItem('redirectAfterSignUp', path); // Store the intended destination
-      router.push('/auth/signup'); // Redirect to the signup page
+    if (!session) {
+      localStorage.setItem('redirectAfterSignUp', path);
+      router.push('/auth/signup');
     } else {
-      router.push(path); // Direct navigation
+      router.push(path);
     }
   };
 
@@ -50,23 +61,16 @@ export default function Header(props: Props) {
       </Typography>
       <Divider />
       <List>
-        {
-            !isSignedIn
-        }
-        <ListItem key="ForEmployer" disablePadding>
-          <ListItemButton sx={{ textAlign: 'center' }} onClick={() => handleNavItemClick('/employer')}>
-            <ListItemText primary="ForEmployer" />
-          </ListItemButton>
-        </ListItem>
-        
-        <ListItem key="ForJobSeeker" disablePadding>
-          <ListItemButton sx={{ textAlign: 'center' }} onClick={() => handleNavItemClick('/jobs/home')}>
-            <ListItemText primary="ForJobSeeker" />
-          </ListItemButton>
-        </ListItem>
+        {navItems.map((item) => (
+          <ListItem key={item.name} disablePadding>
+            <ListItemButton sx={{ textAlign: 'center' }} onClick={() => handleNavItemClick(item.path)}>
+              <ListItemText primary={item.name} />
+            </ListItemButton>
+          </ListItem>
+        ))}
         <ListItem>
-          {isSignedIn ? (
-            <UserButton showName />
+          {session ? (
+            <Button color="inherit" onClick={handleSignOut}>Sign Out</Button>
           ) : (
             <Button color="inherit" href="/auth/signup">Sign Up</Button>
           )}
@@ -99,14 +103,13 @@ export default function Header(props: Props) {
             NEXUS
           </Typography>
           <Box sx={{ display: { xs: 'none', sm: 'block' } }}>
-            <Button sx={{ color: '#fff' }} onClick={() => handleNavItemClick('/employer')}>
-              ForEmployer
-            </Button>
-            <Button sx={{ color: '#fff' }} onClick={() => handleNavItemClick('/jobs/home')}>
-              ForJobSeeker
-            </Button>
-            {isSignedIn ? (
-              <UserButton showName />
+            {navItems.map((item) => (
+              <Button key={item.name} sx={{ color: '#fff' }} onClick={() => handleNavItemClick(item.path)}>
+                {item.name}
+              </Button>
+            ))}
+            {session ? (
+              <Button color="inherit" onClick={handleSignOut}>Sign Out</Button>
             ) : (
               <Button color="inherit" href="/auth/signup">Sign Up</Button>
             )}
@@ -120,7 +123,7 @@ export default function Header(props: Props) {
           open={mobileOpen}
           onClose={handleDrawerToggle}
           ModalProps={{
-            keepMounted: true, // Better open performance on mobile.
+            keepMounted: true,
           }}
           sx={{
             display: { xs: 'block', sm: 'none' },

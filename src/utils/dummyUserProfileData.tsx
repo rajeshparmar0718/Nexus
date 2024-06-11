@@ -17,11 +17,12 @@ export interface Education {
     description: string;
   }
   
+
   export interface UserProfile {
-    user_id:string,
+    user_id: string;
+    email: string;
     firstName: string;
     lastName: string;
-    email: string;
     address: string;
     postalcode: string;
     contactNumber: number | null;
@@ -34,14 +35,16 @@ export interface Education {
     twitter: string;
     education: Education[];
     workExperience: WorkExperience[];
-    resume: string | null;
+    resume: string[];
+    selectedResume?: string | null; 
     image: string | null;
-    primaryRole?: string;
-    yearsOfExperience?: string;
-    openRoles?: string;
-    bio?: string;
-    skills?: string[];
-    resumeVideo: string | null;
+    primaryRole: string;
+    yearsOfExperience: string;
+    openRoles: string;
+    bio: string;
+    skills: string[];
+    resumeVideo: string[]; // Array of video resume URLs
+    
   }
   
   // Mock functions to simulate saving and retrieving profile data

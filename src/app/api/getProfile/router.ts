@@ -1,10 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { supabase } from '@/utils/supabaseClient';
+import { supabase } from '@/utils/supabase/supabaseClient';
 
 export async function GET(req: NextRequest) {
   const { searchParams } = new URL(req.url);
   const user_id = searchParams.get('user_id');
-    console.log(user_id);
+    
   if (!user_id) {
     return NextResponse.json({ error: 'Invalid user ID' }, { status: 400 });
   }
