@@ -19,7 +19,7 @@ export default function Jobs() {
   const { supabase } = useSupabase();
   const [role, setRole] = useState("");
   const [city, setCity] = useState("");
-  const [jobs, setJobs] = useState([]);
+  const [jobs, setJobs] = useState<any>([]); // Explicitly type jobs as JobDetails[]
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -36,6 +36,7 @@ export default function Jobs() {
         .from("jobDetails")
         .select("id, companyName, title, salary, location, jobType");
       if (error) throw error;
+
       setJobs(data);
     } catch (err) {
       setError((err as Error).message);
@@ -96,7 +97,7 @@ export default function Jobs() {
       {error && <Typography color="error">{error}</Typography>}
 
       <List>
-        {jobs.map((job) => (
+        {jobs.map((job: any) => (
           <ListItem key={job.id} component={Paper} sx={{ marginBottom: 2 }}>
             <Box
               sx={{ display: "flex", flexDirection: "column", width: "100%" }}
