@@ -179,7 +179,7 @@ const ResumeCVTab: React.FC<ResumeCVTabProps> = ({
           selectedResume: selectedResumeUrl,
         }));
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error("Error saving profile:", error.message);
     }
   };
