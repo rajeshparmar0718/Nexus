@@ -245,7 +245,7 @@ export default function CreateJob() {
             fullWidth
           />
           <SkillsForm
-            skills={jobDetails.skills}
+            skills={jobDetails.skills || []}
             handleSkillsChange={handleSkillsChange}
           />
 
