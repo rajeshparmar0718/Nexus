@@ -71,23 +71,7 @@ export interface Job {
       localStorage.setItem('appliedJobs', JSON.stringify(appliedJobs));
     }
   
-    // Uncomment and modify the code below to store applied jobs in the backend
-    /*
-    fetch('/api/applied-jobs', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({ jobId }),
-    })
-    .then(response => response.json())
-    .then(data => {
-      console.log('Applied job stored in the backend:', data);
-    })
-    .catch(error => {
-      console.error('Error storing applied job:', error);
-    });
-    */
+
   }
   
   export function isJobApplied(jobId: string): boolean {
