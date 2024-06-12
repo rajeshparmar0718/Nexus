@@ -17,7 +17,7 @@ import { JobDetails } from "@/utils/employer/interfaces"; // Adjust the import p
 
 export default function JobDetailPage() {
   const { supabase, session } = useSupabase();
-  const { jobid } = useParams();
+  const { jobid } = useParams() as { jobid: string };
   const [job, setJob] = useState<JobDetails | null>(null);
   const [applied, setApplied] = useState<boolean>(false);
 
