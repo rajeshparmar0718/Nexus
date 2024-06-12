@@ -60,7 +60,7 @@ export default function JobDetailPage() {
   const handleApply = async () => {
     const { error } = await supabase.from("JobApplied").insert({
       user_id: session?.user.id, // Ensure to get the user_id from the session
-      jobId: job?.id,
+      jobId: jobid,
       resume: "", // You can add the logic to fetch the resume URL
       videoURL: "", // You can add the logic to fetch the video URL
     });
