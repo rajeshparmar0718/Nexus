@@ -51,35 +51,7 @@ const SignUpPage: React.FC = () => {
         <Typography variant="body1" gutterBottom>
           Welcome! Please fill in the details to get started.
         </Typography>
-        <Button
-          variant="contained"
-          color="primary"
-          onClick={() => handleOAuthSignIn("google")}
-          fullWidth
-          sx={{ mb: 1 }}
-        >
-          <img
-            src="/icons/google.svg"
-            alt="Google icon"
-            style={{ marginRight: 8, width: 24, height: 24 }}
-          />
-          Google
-        </Button>
-        <Button
-          variant="contained"
-          color="primary"
-          onClick={() => handleOAuthSignIn("linkedin")}
-          fullWidth
-          sx={{ mb: 2 }}
-        >
-          <img
-            src="/icons/linkedin.svg"
-            alt="LinkedIn icon"
-            style={{ marginRight: 8, width: 24, height: 24 }}
-          />
-          LinkedIn
-        </Button>
-        <Divider sx={{ width: "100%", my: 2 }}>or</Divider>
+
         <Box
           component="form"
           onSubmit={handleSignUp}
@@ -121,7 +93,7 @@ const SignUpPage: React.FC = () => {
           </Button>
         </Box>
         <Typography variant="body2" sx={{ mt: 2 }}>
-          Already have an account?{" "}
+          Already have an account? Or SignIn with Google or Linkdin{" "}
           <Button href="/auth/signin" color="primary">
             Sign in
           </Button>

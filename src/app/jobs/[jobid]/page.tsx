@@ -20,15 +20,24 @@ export default function JobDetailPage() {
   const { jobid } = useParams() as { jobid: string };
   const [job, setJob] = useState<JobDetails | null>(null);
   const [applied, setApplied] = useState<boolean>(false);
+  const [resumeFiles, setResumeFiles] = useState<File[]>([]);
+  const [selectedResumeIndex, setSelectedResumeIndex] = useState<number | null>(
+    null
+  );
+  const [loading, setLoading] = useState<boolean>(true);
 
   useEffect(() => {
-    if (jobid) {
+    if (jobid && session?.user) {
       fetchJobDetails(jobid);
       checkIfJobApplied(jobid);
+    } else if (!session?.user) {
+      setLoading(false);
+      console.error("User not authenticated");
     }
-  }, [jobid]);
+  }, [jobid, session]);
 
   const fetchJobDetails = async (jobid: string) => {
+    console.log("fetch table call", session?.user.id);
     const { data, error } = await supabase
       .from("jobDetails")
       .select("*")
@@ -40,37 +49,91 @@ export default function JobDetailPage() {
     } else {
       setJob(data);
     }
+    setLoading(false);
   };
 
   const checkIfJobApplied = async (jobid: string) => {
-    const { data, error } = await supabase
-      .from("JobApplied") // Assuming you have a table 'JobApplied' to track applied jobs
-      .select("*")
-      .eq("jobId", jobid)
-      .eq("user_id", session?.user.id) // Ensure to get the user_id from the session
-      .single();
+    const user = session?.user;
+    if (!user) {
+      console.error("User not found");
+      return;
+    }
 
-    if (error) {
-      console.error("Error checking job application status:", error.message);
-    } else {
-      setApplied(!!data);
+    try {
+      const { data, error } = await supabase
+        .from("job_applications")
+        .select("*")
+        .eq("job_id", jobid)
+        .eq("user_id", user.id)
+        .single();
+
+      if (error && error.code !== "PGRST116") {
+        console.error("Error checking job application status:", error.message);
+      } else {
+        setApplied(!!data);
+      }
+    } catch (error: any) {
+      console.error("Error applying to job:", error.message);
     }
   };
 
   const handleApply = async () => {
-    const { error } = await supabase.from("JobApplied").insert({
-      user_id: session?.user.id, // Ensure to get the user_id from the session
-      jobId: jobid,
-      resume: "", // You can add the logic to fetch the resume URL
-      videoURL: "", // You can add the logic to fetch the video URL
-    });
+    const resumeUrl = await uploadResume();
+    if (resumeUrl) {
+      const jobApplicationInstance = supabase.from("job_applications");
+      const { error } = await jobApplicationInstance.insert({
+        user_id: session?.user.id,
+        job_id: jobid,
+        resume_url: resumeUrl,
+      });
 
-    if (error) {
-      console.error("Error applying to job:", error.message);
-    } else {
-      setApplied(true); // Update the state to reflect the job application
+      if (error) {
+        console.error("Error applying to job:", error.message);
+      } else {
+        setApplied(true);
+      }
     }
   };
+
+  const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = e.target.files;
+    if (files) {
+      const newFiles = Array.from(files);
+      setResumeFiles((prevFiles) => [...prevFiles, ...newFiles]);
+    }
+  };
+
+  const uploadResume = async () => {
+    if (resumeFiles.length === 0) return null;
+    const resumeFile = resumeFiles[0]; // Take the first file for simplicity
+    const user = session?.user;
+    if (!user) return null;
+
+    const uid = new Date().valueOf();
+    const newFileName = `${uid}${resumeFile.name}`;
+    const file_path = `/files/${user.id}/${newFileName}`;
+    const supabaseStorageInstance = supabase.storage.from("resumes");
+
+    const { data: resumeData, error: resumeError } =
+      await supabaseStorageInstance.upload(file_path, resumeFile);
+
+    if (resumeError) {
+      console.error("Error uploading resume:", resumeError.message);
+    } else {
+      const { data: publicUrlData } = supabase.storage
+        .from("resumes")
+        .getPublicUrl(resumeData.path);
+
+      if (!publicUrlData) {
+        console.error("Resume URL not found");
+      }
+      return publicUrlData?.publicUrl;
+    }
+  };
+
+  if (loading) {
+    return <Typography>Loading...</Typography>;
+  }
 
   if (!job) {
     return (
@@ -190,15 +253,18 @@ export default function JobDetailPage() {
               Is your profile up to date? Click <a href="#">here</a> to verify
               how you will appear to recruiters.
             </Typography>
-            <TextField
-              label="What interests you about working for this company?"
-              multiline
-              rows={4}
-              variant="outlined"
-              fullWidth
+            <Button
+              variant="contained"
+              component="label"
               sx={{ mt: 2 }}
               disabled={applied} // Disable the input if the job is applied for
-            />
+            >
+              Upload Resume
+              <input type="file" hidden onChange={handleFileUpload} />
+            </Button>
+            {resumeFiles.length > 0 && (
+              <Typography sx={{ mt: 1 }}>{resumeFiles[0].name}</Typography>
+            )}
             {applied ? (
               <Button
                 variant="contained"

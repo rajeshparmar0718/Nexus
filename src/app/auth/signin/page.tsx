@@ -29,6 +29,7 @@ const SignInPage: React.FC = () => {
     if (error) {
       setError(error.message);
     } else {
+      console.log("back to home page");
       router.push("/jobs/home");
     }
   };

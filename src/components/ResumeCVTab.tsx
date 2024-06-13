@@ -131,7 +131,6 @@ const ResumeCVTab: React.FC<ResumeCVTabProps> = ({
           const publicUrl = supabase.storage
             .from("resumes")
             .getPublicUrl(resumeData.path).data.publicUrl;
-
           resumeUrls.push(publicUrl);
         }
       }
@@ -158,15 +157,24 @@ const ResumeCVTab: React.FC<ResumeCVTabProps> = ({
 
       const selectedResumeUrl =
         selectedResumeIndex !== null ? resumeUrls[selectedResumeIndex] : null;
+      console.log("Updating profile with:", {
+        resume: resumeUrls,
+        resumeVideo: videoUrls,
+        selectedResume: selectedResumeUrl,
+      });
 
-      const supabaseInstance = supabase.from("profiles");
-      const { error: updateError, data } = await supabaseInstance
+      if (!profile.user_id) {
+        console.error("User not found");
+      }
+      const supabaseProfileInstance = supabase.from("profiles");
+      const { error: updateError, data } = await supabaseProfileInstance
         .update({
-          resume: JSON.stringify(resumeUrls),
+          resume: [...resumeUrls],
           resumeVideo: JSON.stringify(videoUrls),
           selectedResume: selectedResumeUrl,
         })
-        .eq("user_id", profile.user_id);
+        .eq("user_id", profile.user_id)
+        .select("*");
       console.log("📢 [ResumeCVTab.tsx:171]", data);
       if (updateError) {
         console.error("Error updating profile:", updateError.message);
