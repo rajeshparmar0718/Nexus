@@ -119,7 +119,6 @@ const ResumeCVTab: React.FC<ResumeCVTabProps> = ({
     try {
       for (const resumeFile of resumeFiles) {
         const uid = new Date().valueOf();
-        // const { name, extension } = findFileExtension(file.name);
         const newFileName = `${uid}${resumeFile.name}`;
         const file_path = `/files/${profile.user_id}/${newFileName}`;
         const supabaseStorageInstance = supabase.storage.from("resumes");

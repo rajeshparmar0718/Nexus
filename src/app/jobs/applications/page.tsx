@@ -20,6 +20,7 @@ export default function AppliedJobs() {
   const [appliedJobs, setAppliedJobs] = useState<any>([]);
   const [selectedTab, setSelectedTab] = useState(0);
 
+  const combinedData: any = [];
   useEffect(() => {
     if (session?.user) {
       fetchAppliedJobs(session.user.id);
@@ -31,7 +32,7 @@ export default function AppliedJobs() {
       // Fetch the applied jobs from the job_applications table
       const { data: applications, error: applicationsError } = await supabase
         .from("job_applications")
-        .select("job_id")
+        .select("*")
         .eq("user_id", userId);
 
       if (applicationsError) {
@@ -45,14 +46,26 @@ export default function AppliedJobs() {
         // Fetch job details for the applied jobs
         const { data: jobs, error: jobsError } = await supabase
           .from("jobDetails")
-          .select("id, companyName, title, salary, location, jobType")
+          .select("id, companyName, title, jobType")
           .in("id", jobIds);
 
         if (jobsError) {
           throw jobsError;
         }
+        const jobDetailsMap = new Map();
+        jobs.forEach((job) => {
+          jobDetailsMap.set(job.id, job);
+        });
 
-        setAppliedJobs(jobs);
+        // Combine job applications with their corresponding job details
+        const combinedData = applications.map((application) => ({
+          ...application,
+          jobDetails: jobDetailsMap.get(application.job_id),
+        }));
+
+        // Log the combined data to verify the structure
+        console.log("📢 [page.tsx:67]", combinedData);
+        setAppliedJobs(combinedData);
       }
     } catch (error: any) {
       console.error("Error fetching applied jobs:", error.message);
@@ -93,7 +106,6 @@ export default function AppliedJobs() {
                   <Box sx={{ width: 50, height: 50, marginRight: 2 }}>
                     <img
                       src="/path-to-company-logo.png"
-                      alt={`${job.companyName} logo`}
                       style={{
                         width: "100%",
                         height: "100%",
@@ -102,12 +114,16 @@ export default function AppliedJobs() {
                     />
                   </Box>
                   <Box>
-                    <Typography variant="h6">{job.companyName}</Typography>
-                    <Typography variant="body2">{job.title}</Typography>
+                    <Typography variant="h6">
+                      {job.jobDetails.companyName}
+                    </Typography>
+                    <Typography variant="body2">
+                      {job.jobDetails.title}
+                    </Typography>
                   </Box>
                 </Box>
                 <Box>
-                  <Typography variant="body2">Status: Pending</Typography>
+                  <Typography variant="body2">Status:{job.status} </Typography>
                   <Typography variant="body2">
                     Applied: {new Date().toLocaleDateString()}
                   </Typography>

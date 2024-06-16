@@ -10,7 +10,11 @@ import {
   Button,
   Grid,
   Avatar,
-  TextField,
+  FormControl,
+  RadioGroup,
+  FormControlLabel,
+  Radio,
+  Divider,
 } from "@mui/material";
 import { useSupabase } from "@/context/SupabaseAuthProvider";
 import { JobDetails } from "@/utils/employer/interfaces"; // Adjust the import path as needed
@@ -24,20 +28,23 @@ export default function JobDetailPage() {
   const [selectedResumeIndex, setSelectedResumeIndex] = useState<number | null>(
     null
   );
+  const [userResumes, setUserResumes] = useState<string[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
 
   useEffect(() => {
-    if (jobid && session?.user) {
+    if (jobid) {
       fetchJobDetails(jobid);
-      checkIfJobApplied(jobid);
-    } else if (!session?.user) {
-      setLoading(false);
-      console.error("User not authenticated");
     }
-  }, [jobid, session]);
+  }, [jobid]);
+
+  useEffect(() => {
+    if (session?.user && jobid) {
+      fetchUserResumes();
+      checkIfJobApplied(jobid);
+    }
+  }, [session, jobid]);
 
   const fetchJobDetails = async (jobid: string) => {
-    console.log("fetch table call", session?.user.id);
     const { data, error } = await supabase
       .from("jobDetails")
       .select("*")
@@ -52,6 +59,23 @@ export default function JobDetailPage() {
     setLoading(false);
   };
 
+  const fetchUserResumes = async () => {
+    const user = session?.user;
+    if (!user) return;
+
+    const { data, error } = await supabase
+      .from("profiles")
+      .select("*")
+      .eq("user_id", user.id)
+      .single();
+
+    if (error) {
+      console.error("Error fetching user resumes:", error.message);
+    } else {
+      setUserResumes(data?.resume || []);
+    }
+  };
+
   const checkIfJobApplied = async (jobid: string) => {
     const user = session?.user;
     if (!user) {
@@ -62,7 +86,7 @@ export default function JobDetailPage() {
     try {
       const { data, error } = await supabase
         .from("job_applications")
-        .select("*")
+        .select("user_id")
         .eq("job_id", jobid)
         .eq("user_id", user.id)
         .single();
@@ -78,11 +102,17 @@ export default function JobDetailPage() {
   };
 
   const handleApply = async () => {
-    const resumeUrl = await uploadResume();
+    console.log("📢 [page.tsx:105]", selectedResumeIndex);
+    console.log("📢 [page.tsx:106]", userResumes);
+    const resumeUrl =
+      selectedResumeIndex !== null
+        ? userResumes[selectedResumeIndex]
+        : await uploadResume();
+
     if (resumeUrl) {
       const jobApplicationInstance = supabase.from("job_applications");
       const { error } = await jobApplicationInstance.insert({
-        user_id: session?.user.id,
+        user_id: session?.user?.id,
         job_id: jobid,
         resume_url: resumeUrl,
       });
@@ -253,18 +283,49 @@ export default function JobDetailPage() {
               Is your profile up to date? Click <a href="#">here</a> to verify
               how you will appear to recruiters.
             </Typography>
-            <Button
-              variant="contained"
-              component="label"
-              sx={{ mt: 2 }}
-              disabled={applied} // Disable the input if the job is applied for
-            >
-              Upload Resume
-              <input type="file" hidden onChange={handleFileUpload} />
-            </Button>
-            {resumeFiles.length > 0 && (
-              <Typography sx={{ mt: 1 }}>{resumeFiles[0].name}</Typography>
-            )}
+            <Box sx={{ mt: 2 }}>
+              <Typography variant="subtitle1">
+                Add a resume for the employer
+              </Typography>
+              <FormControl component="fieldset" sx={{ mt: 2 }}>
+                <RadioGroup
+                  aria-label="resume"
+                  name="resume"
+                  value={selectedResumeIndex}
+                  onChange={(e) =>
+                    setSelectedResumeIndex(Number(e.target.value))
+                  }
+                >
+                  {userResumes.map((resumeUrl, index) => (
+                    <FormControlLabel
+                      key={index}
+                      value={index}
+                      control={<Radio />}
+                      label={
+                        <Box sx={{ display: "flex", alignItems: "center" }}>
+                          <Typography variant="body2" sx={{ ml: 1 }}>
+                            {resumeUrl.split("/").pop()}
+                          </Typography>
+                        </Box>
+                      }
+                    />
+                  ))}
+                </RadioGroup>
+              </FormControl>
+              <Divider sx={{ my: 2 }}>or</Divider>
+              <Button
+                variant="contained"
+                component="label"
+                disabled={applied}
+                sx={{ width: "100%" }}
+              >
+                Upload New Resume
+                <input type="file" hidden onChange={handleFileUpload} />
+              </Button>
+              {resumeFiles.length > 0 && (
+                <Typography sx={{ mt: 1 }}>{resumeFiles[0].name}</Typography>
+              )}
+            </Box>
             {applied ? (
               <Button
                 variant="contained"
