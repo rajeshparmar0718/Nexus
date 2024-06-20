@@ -1,17 +1,9 @@
-// app/auth/signup/page.tsx
 "use client";
 
 import React, { useState } from "react";
 import { useSupabase } from "@/context/SupabaseAuthProvider";
 import { useRouter } from "next/navigation";
-import {
-  Box,
-  Button,
-  TextField,
-  Typography,
-  Divider,
-  Container,
-} from "@mui/material";
+import { Box, Button, TextField, Typography, Container } from "@mui/material";
 
 const SignUpPage: React.FC = () => {
   const { supabase } = useSupabase();
@@ -22,21 +14,20 @@ const SignUpPage: React.FC = () => {
 
   const handleSignUp = async (e: React.FormEvent) => {
     e.preventDefault();
-    const { error } = await supabase.auth.signUp({
+    const { data, error } = await supabase.auth.signUp({
       email,
       password,
     });
+    console.log("📢 [page.tsx:21]", error);
     if (error) {
       setError(error.message);
     } else {
+      if (data?.user) {
+        await supabase
+          .from("user_roles")
+          .insert({ user_id: data.user.id, role_id: 1 }); // Default to 'user' role
+      }
       router.push("/jobs/home");
-    }
-  };
-
-  const handleOAuthSignIn = async (provider: "google" | "linkedin") => {
-    const { error } = await supabase.auth.signInWithOAuth({ provider });
-    if (error) {
-      setError(error.message);
     }
   };
 
@@ -67,12 +58,6 @@ const SignUpPage: React.FC = () => {
             margin="normal"
           />
           <TextField
-            label="Phone number (Optional)"
-            type="tel"
-            fullWidth
-            margin="normal"
-          />
-          <TextField
             label="Password"
             type="password"
             value={password}
@@ -93,7 +78,7 @@ const SignUpPage: React.FC = () => {
           </Button>
         </Box>
         <Typography variant="body2" sx={{ mt: 2 }}>
-          Already have an account? Or SignIn with Google or Linkdin{" "}
+          Already have an account? Or Sign In with Google or LinkedIn{" "}
           <Button href="/auth/signin" color="primary">
             Sign in
           </Button>

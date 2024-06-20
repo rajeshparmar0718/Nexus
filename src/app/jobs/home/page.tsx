@@ -1,8 +1,18 @@
-'use client';
+"use client";
 
-import React, { useEffect, useState } from 'react';
-import { Container, Typography, Box, Paper, Avatar, Menu, MenuItem, Button } from '@mui/material';
-import ArrowDropDownIcon from '@mui/icons-material/ArrowDropDown';
+import React, { useEffect, useState } from "react";
+import {
+  Container,
+  Typography,
+  Box,
+  Paper,
+  Avatar,
+  Menu,
+  MenuItem,
+  Button,
+} from "@mui/material";
+import ArrowDropDownIcon from "@mui/icons-material/ArrowDropDown";
+import RoleGuard from "@/components/RoleGuard";
 
 interface UserProfile {
   firstName: string;
@@ -17,31 +27,36 @@ interface UserProfile {
 
 const statusOptions = [
   {
-    value: 'Ready to interview',
-    description: 'You’re actively looking for new work and ready to interview. Your job profile will be visible to startups.',
+    value: "Ready to interview",
+    description:
+      "You’re actively looking for new work and ready to interview. Your job profile will be visible to startups.",
   },
   {
-    value: 'Open to offers',
-    description: 'You’re not looking but open to hear about new opportunities. Your job profile will be visible to startups.',
+    value: "Open to offers",
+    description:
+      "You’re not looking but open to hear about new opportunities. Your job profile will be visible to startups.",
   },
   {
-    value: 'Closed to offers',
-    description: 'You’re not looking and don’t want to hear about new opportunities. Your job profile will be hidden to startups.',
+    value: "Closed to offers",
+    description:
+      "You’re not looking and don’t want to hear about new opportunities. Your job profile will be hidden to startups.",
   },
 ];
 
 export default function JobsHome() {
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
-  const [statusDescription, setStatusDescription] = useState<string>('');
+  const [statusDescription, setStatusDescription] = useState<string>("");
 
   useEffect(() => {
-    const savedProfile = localStorage.getItem('userProfile');
+    const savedProfile = localStorage.getItem("userProfile");
     if (savedProfile) {
       const parsedProfile = JSON.parse(savedProfile);
       setProfile(parsedProfile);
-      const selectedStatus = statusOptions.find((option) => option.value === parsedProfile.status);
-      setStatusDescription(selectedStatus?.description || '');
+      const selectedStatus = statusOptions.find(
+        (option) => option.value === parsedProfile.status
+      );
+      setStatusDescription(selectedStatus?.description || "");
     }
   }, []);
 
@@ -58,7 +73,7 @@ export default function JobsHome() {
       const updatedProfile = { ...profile, status };
       setProfile(updatedProfile);
       setStatusDescription(description);
-      localStorage.setItem('userProfile', JSON.stringify(updatedProfile));
+      localStorage.setItem("userProfile", JSON.stringify(updatedProfile));
       setAnchorEl(null);
     }
   };
@@ -69,7 +84,9 @@ export default function JobsHome() {
         <Typography variant="h4" component="h1" gutterBottom>
           Home
         </Typography>
-        <Typography variant="body1">No profile information available.</Typography>
+        <Typography variant="body1">
+          No profile information available.
+        </Typography>
       </Container>
     );
   }
@@ -79,8 +96,8 @@ export default function JobsHome() {
       <Typography variant="h4" component="h1" gutterBottom>
         Home
       </Typography>
-      <Paper sx={{ padding: '16px', marginTop: '16px' }}>
-        <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+      <Paper sx={{ padding: "16px", marginTop: "16px" }}>
+        <Box sx={{ display: "flex", alignItems: "center", gap: 2 }}>
           <Avatar sx={{ width: 56, height: 56 }}>NP</Avatar>
           <Box>
             <Typography variant="h6" gutterBottom>
@@ -95,7 +112,8 @@ export default function JobsHome() {
           </Box>
         </Box>
         <Typography variant="body2" color="textSecondary" sx={{ mt: 2 }}>
-          Where are you in your job search? Keep your job status up-to-date to inform employers of your search.
+          Where are you in your job search? Keep your job status up-to-date to
+          inform employers of your search.
         </Typography>
         <Button
           variant="outlined"
@@ -105,9 +123,18 @@ export default function JobsHome() {
         >
           {profile.status}
         </Button>
-        <Menu anchorEl={anchorEl} open={Boolean(anchorEl)} onClose={handleStatusClose}>
+        <Menu
+          anchorEl={anchorEl}
+          open={Boolean(anchorEl)}
+          onClose={handleStatusClose}
+        >
           {statusOptions.map((option) => (
-            <MenuItem key={option.value} onClick={() => handleStatusChange(option.value, option.description)}>
+            <MenuItem
+              key={option.value}
+              onClick={() =>
+                handleStatusChange(option.value, option.description)
+              }
+            >
               <Box>
                 <Typography variant="body1">{option.value}</Typography>
                 <Typography variant="body2" color="textSecondary">

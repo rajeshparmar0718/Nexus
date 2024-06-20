@@ -11,10 +11,9 @@ import {
   Grid,
   Avatar,
   FormControl,
-  RadioGroup,
-  FormControlLabel,
-  Radio,
-  Divider,
+  MenuItem,
+  Select,
+  SelectChangeEvent,
 } from "@mui/material";
 import { useSupabase } from "@/context/SupabaseAuthProvider";
 import { JobDetails } from "@/utils/employer/interfaces"; // Adjust the import path as needed
@@ -25,10 +24,8 @@ export default function JobDetailPage() {
   const [job, setJob] = useState<JobDetails | null>(null);
   const [applied, setApplied] = useState<boolean>(false);
   const [resumeFiles, setResumeFiles] = useState<File[]>([]);
-  const [selectedResumeIndex, setSelectedResumeIndex] = useState<number | null>(
-    null
-  );
-  const [userResumes, setUserResumes] = useState<string[]>([]);
+  const [userResumes, setUserResumes] = useState<any[]>([]);
+  const [selectedResume, setSelectedResume] = useState<string | null>(null);
   const [loading, setLoading] = useState<boolean>(true);
 
   useEffect(() => {
@@ -62,17 +59,21 @@ export default function JobDetailPage() {
   const fetchUserResumes = async () => {
     const user = session?.user;
     if (!user) return;
-
-    const { data, error } = await supabase
+    const { data: profileData, error: profileError } = await supabase
       .from("profiles")
-      .select("*")
+      .select("resume")
       .eq("user_id", user.id)
       .single();
-
-    if (error) {
-      console.error("Error fetching user resumes:", error.message);
+    if (profileError) {
+      console.error(
+        "Error fetching user profiles resumes:",
+        profileError.message
+      );
+      return;
     } else {
-      setUserResumes(data?.resume || []);
+      const resumeData = profileData.resume.map((resume: any) => resume);
+
+      setUserResumes(resumeData);
     }
   };
 
@@ -102,12 +103,11 @@ export default function JobDetailPage() {
   };
 
   const handleApply = async () => {
-    console.log("📢 [page.tsx:105]", selectedResumeIndex);
-    console.log("📢 [page.tsx:106]", userResumes);
-    const resumeUrl =
-      selectedResumeIndex !== null
-        ? userResumes[selectedResumeIndex]
-        : await uploadResume();
+    let resumeUrl = selectedResume;
+    if (resumeFiles.length > 0 && selectedResume === "new") {
+      const resumeData = await uploadResume(resumeFiles[0]);
+      resumeUrl = resumeData?.path || "";
+    }
 
     if (resumeUrl) {
       const jobApplicationInstance = supabase.from("job_applications");
@@ -115,6 +115,7 @@ export default function JobDetailPage() {
         user_id: session?.user?.id,
         job_id: jobid,
         resume_url: resumeUrl,
+        status: "applied",
       });
 
       if (error) {
@@ -125,40 +126,67 @@ export default function JobDetailPage() {
     }
   };
 
-  const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files;
     if (files) {
       const newFiles = Array.from(files);
-      setResumeFiles((prevFiles) => [...prevFiles, ...newFiles]);
+      setResumeFiles(newFiles);
+      const resumeUrl = await uploadResume(newFiles[0]);
+      setUserResumes((prevResumes: any) => [...prevResumes, resumeUrl]);
+      setSelectedResume(resumeUrl?.path || ""); // Select the newly uploaded resume
     }
   };
 
-  const uploadResume = async () => {
-    if (resumeFiles.length === 0) return null;
-    const resumeFile = resumeFiles[0]; // Take the first file for simplicity
+  const uploadResume = async (resumeFile: File) => {
+    if (!resumeFile) return null;
+
     const user = session?.user;
     if (!user) return null;
 
     const uid = new Date().valueOf();
-    const newFileName = `${uid}${resumeFile.name}`;
+    const newFileName = `${uid}_${resumeFile.name}`;
     const file_path = `/files/${user.id}/${newFileName}`;
     const supabaseStorageInstance = supabase.storage.from("resumes");
-
     const { data: resumeData, error: resumeError } =
       await supabaseStorageInstance.upload(file_path, resumeFile);
 
     if (resumeError) {
       console.error("Error uploading resume:", resumeError.message);
-    } else {
-      const { data: publicUrlData } = supabase.storage
-        .from("resumes")
-        .getPublicUrl(resumeData.path);
-
-      if (!publicUrlData) {
-        console.error("Resume URL not found");
-      }
-      return publicUrlData?.publicUrl;
+      return null;
     }
+
+    const { data: publicUrlData } = supabase.storage
+      .from("resumes")
+      .getPublicUrl(resumeData.path);
+
+    if (!publicUrlData) {
+      console.error("Resume URL not found");
+      return null;
+    }
+
+    // Store the new resume URL in the profiles table for future reference
+    const newResume = {
+      id: uid,
+      name: resumeFile.name,
+      path: publicUrlData.publicUrl,
+    };
+
+    const { data: updatedProfileData, error: updateError } = await supabase
+      .from("profiles")
+      .update({
+        resume: [...userResumes, newResume],
+      })
+      .eq("user_id", user.id);
+
+    if (updateError) {
+      console.error(
+        "Error updating user profile resumes:",
+        updateError.message
+      );
+      return null;
+    }
+
+    return newResume;
   };
 
   if (loading) {
@@ -288,43 +316,34 @@ export default function JobDetailPage() {
                 Add a resume for the employer
               </Typography>
               <FormControl component="fieldset" sx={{ mt: 2 }}>
-                <RadioGroup
-                  aria-label="resume"
-                  name="resume"
-                  value={selectedResumeIndex}
-                  onChange={(e) =>
-                    setSelectedResumeIndex(Number(e.target.value))
+                <Select
+                  value={selectedResume ? selectedResume : ""}
+                  onChange={(e: SelectChangeEvent<string>) =>
+                    setSelectedResume(e.target.value as string)
                   }
+                  fullWidth
+                  displayEmpty
                 >
-                  {userResumes.map((resumeUrl, index) => (
-                    <FormControlLabel
-                      key={index}
-                      value={index}
-                      control={<Radio />}
-                      label={
-                        <Box sx={{ display: "flex", alignItems: "center" }}>
-                          <Typography variant="body2" sx={{ ml: 1 }}>
-                            {resumeUrl.split("/").pop()}
-                          </Typography>
-                        </Box>
-                      }
-                    />
+                  <MenuItem value="" disabled>
+                    Select a resume
+                  </MenuItem>
+                  {userResumes.map((resume: any, index) => (
+                    <MenuItem key={index} value={resume.path}>
+                      {resume.name}
+                    </MenuItem>
                   ))}
-                </RadioGroup>
+                </Select>
               </FormControl>
-              <Divider sx={{ my: 2 }}>or</Divider>
-              <Button
-                variant="contained"
-                component="label"
-                disabled={applied}
-                sx={{ width: "100%" }}
-              >
-                Upload New Resume
-                <input type="file" hidden onChange={handleFileUpload} />
-              </Button>
-              {resumeFiles.length > 0 && (
-                <Typography sx={{ mt: 1 }}>{resumeFiles[0].name}</Typography>
-              )}
+              <Box sx={{ mt: 2 }}>
+                <Button
+                  variant="contained"
+                  component="label"
+                  sx={{ width: "100%" }}
+                >
+                  Upload New Resume
+                  <input type="file" hidden onChange={handleFileUpload} />
+                </Button>
+              </Box>
             </Box>
             {applied ? (
               <Button

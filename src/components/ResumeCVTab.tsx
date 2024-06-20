@@ -112,7 +112,7 @@ const ResumeCVTab: React.FC<ResumeCVTabProps> = ({
   };
 
   const handleSave = async () => {
-    const resumeUrls: string[] = [];
+    const resumeUrls: object[] = [];
     if (profile.user_id) {
       console.log(profile.user_id);
     }
@@ -122,6 +122,7 @@ const ResumeCVTab: React.FC<ResumeCVTabProps> = ({
         const newFileName = `${uid}${resumeFile.name}`;
         const file_path = `/files/${profile.user_id}/${newFileName}`;
         const supabaseStorageInstance = supabase.storage.from("resumes");
+
         const { data: resumeData, error: resumeError } =
           await supabaseStorageInstance.upload(file_path, resumeFile);
         if (resumeError) {
@@ -130,10 +131,13 @@ const ResumeCVTab: React.FC<ResumeCVTabProps> = ({
           const publicUrl = supabase.storage
             .from("resumes")
             .getPublicUrl(resumeData.path).data.publicUrl;
-          resumeUrls.push(publicUrl);
+          resumeUrls.push({
+            id: `${uid}`,
+            name: resumeFile.name,
+            path: publicUrl,
+          });
         }
       }
-      console.log("Resume urls:", resumeUrls);
       const videoUrls: string[] = [];
 
       if (recordedVideo) {
@@ -154,27 +158,24 @@ const ResumeCVTab: React.FC<ResumeCVTabProps> = ({
         }
       }
 
-      const selectedResumeUrl =
+      const selectedResumeUrl: any =
         selectedResumeIndex !== null ? resumeUrls[selectedResumeIndex] : null;
-      console.log("Updating profile with:", {
-        resume: resumeUrls,
-        resumeVideo: videoUrls,
-        selectedResume: selectedResumeUrl,
-      });
 
       if (!profile.user_id) {
         console.error("User not found");
       }
+
       const supabaseProfileInstance = supabase.from("profiles");
+
       const { error: updateError, data } = await supabaseProfileInstance
         .update({
-          resume: [...resumeUrls],
-          resumeVideo: JSON.stringify(videoUrls),
-          selectedResume: selectedResumeUrl,
+          resume: [...(profile?.resume || []), ...resumeUrls],
+          // resumeVideo: JSON.stringify(videoUrls),
+          selectedResume: selectedResumeUrl?.id,
         })
         .eq("user_id", profile.user_id)
         .select("*");
-      console.log("📢 [ResumeCVTab.tsx:171]", data);
+
       if (updateError) {
         console.error("Error updating profile:", updateError.message);
       } else {
@@ -183,7 +184,7 @@ const ResumeCVTab: React.FC<ResumeCVTabProps> = ({
           ...prevProfile,
           resume: resumeUrls,
           resumeVideo: videoUrls,
-          selectedResume: selectedResumeUrl,
+          selectedResume: selectedResumeUrl?.id,
         }));
       }
     } catch (error: any) {
