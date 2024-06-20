@@ -334,27 +334,30 @@ export default function JobDetailPage() {
                   ))}
                 </Select>
               </FormControl>
-              <Box sx={{ mt: 2 }}>
-                <Button
-                  variant="contained"
-                  component="label"
-                  sx={{ width: "100%" }}
-                >
-                  Upload New Resume
-                  <input type="file" hidden onChange={handleFileUpload} />
-                </Button>
-              </Box>
             </Box>
             {applied ? (
-              <Button
-                variant="contained"
-                color="primary"
-                fullWidth
-                sx={{ mt: 2 }}
-                disabled
-              >
-                Applied
-              </Button>
+              <>
+                <Box sx={{ mt: 2 }}>
+                  <Button
+                    variant="contained"
+                    component="label"
+                    sx={{ width: "100%" }}
+                    disabled
+                  >
+                    Upload New Resume
+                    <input type="file" hidden onChange={handleFileUpload} />
+                  </Button>
+                </Box>
+                <Button
+                  variant="contained"
+                  color="primary"
+                  fullWidth
+                  sx={{ mt: 2 }}
+                  disabled
+                >
+                  Applied
+                </Button>
+              </>
             ) : (
               <Button
                 variant="contained"
